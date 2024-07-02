@@ -20,8 +20,8 @@ public class AuthService {
     private final JpaMemberRepository jpaMemberRepository;
     private final PasswordEncoder passwordEncoder;
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
-    private final JwtUtil jwtUtil; // JWT 생성 및 검증 유틸리티
-    private final TokenService tokenService; // Refresh Token 저장 및 관리 서비스
+    private final JwtUtil jwtUtil;
+    private final TokenService tokenService;
 
     @Autowired
     public AuthService(JpaMemberRepository jpaMemberRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, TokenService tokenService) {
@@ -48,10 +48,16 @@ public class AuthService {
 
             // Access Token 및 Refresh Token 생성
             String accessToken = jwtUtil.createAccessToken(memberEntity.getEmail(), memberEntity.getRole());
-            String refreshToken = jwtUtil.createRefreshToken();
+            String refreshToken = tokenService.getRefreshToken(memberEntity.getEmail());
 
             // Refresh Token 저장 (Redis에 저장)
-            tokenService.storeRefreshToken(memberEntity.getEmail(), refreshToken);
+            if (refreshToken == null) {
+                refreshToken = jwtUtil.createRefreshToken();
+                tokenService.storeRefreshToken(memberEntity.getEmail(), refreshToken);
+            }
+
+            // Access Token 저장 (Redis에 저장)
+            tokenService.storeAccessToken(memberEntity.getEmail(), accessToken);
 
             // Refresh Token을 응답 헤더에 추가
             res.addHeader("RefreshToken", refreshToken);
