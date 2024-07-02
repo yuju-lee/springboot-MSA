@@ -79,15 +79,16 @@ public class MemberService {
         emailService.sendEmail(member.getEmail(), "Email Verification", "Click the link to verify your email: " + url);
     }
 
-    public void verifyUser(String token) {
+    public void completeSignup(String token) {
         String email = (String) redisTemplate.opsForValue().get(token);
         if (email == null) {
-            throw new IllegalArgumentException("Invalid verification token");
+            throw new IllegalArgumentException("Invalid or expired verification token");
         }
 
         MemberEntity member = jpaMemberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        member.setEnabled(true);
+
+        member.setEnabled(true);  // Assuming MemberEntity has a field to indicate whether the user is enabled
         jpaMemberRepository.save(member);
 
         redisTemplate.delete(token);

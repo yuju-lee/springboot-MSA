@@ -30,6 +30,18 @@ public class MemberController {
         }
     }
 
+    @GetMapping("/verify")
+    public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
+        try {
+            memberService.completeSignup(token);
+            return ResponseEntity.ok("Email verification successful. Your account is now activated.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).body("Bad Request: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Internal Server Error: " + e.getMessage());
+        }
+    }
+
     @PutMapping("/update-password")
     public ResponseEntity<String> updatePassword(@RequestHeader("X-Authenticated-User") String email, @RequestBody UpdatePasswordDTO updatePasswordDTO) {
         try {
