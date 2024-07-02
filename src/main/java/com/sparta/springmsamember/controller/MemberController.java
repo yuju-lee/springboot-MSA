@@ -1,31 +1,21 @@
 package com.sparta.springmsamember.controller;
 
-
-import com.sparta.springmsamember.dto.MemberDTO;
-import com.sparta.springmsamember.dto.UpdatePasswordDTO;
-import com.sparta.springmsamember.dto.UpdateProfileDTO;
+import com.sparta.springmsamember.dto.*;
 import com.sparta.springmsamember.entity.MemberEntity;
-import com.sparta.springmsamember.repository.JpaMemberRepository;
 import com.sparta.springmsamember.service.MemberService;
-import org.antlr.v4.runtime.misc.LogManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/member")
 public class MemberController {
 
     private final MemberService memberService;
-    private final PasswordEncoder passwordEncoder;
 
     @Autowired
-    public MemberController(MemberService memberService, PasswordEncoder passwordEncoder) {
+    public MemberController(MemberService memberService) {
         this.memberService = memberService;
-        this.passwordEncoder = passwordEncoder;
     }
 
     @PostMapping("/signup")
@@ -57,6 +47,30 @@ public class MemberController {
         try {
             memberService.updateProfile(email, updateProfileDTO);
             return ResponseEntity.ok("Profile updated successfully.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).body("Bad Request: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Internal Server Error: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/request-password-reset")
+    public ResponseEntity<String> requestPasswordReset(@RequestBody PasswordResetRequestDTO requestDTO) {
+        try {
+            memberService.requestPasswordReset(requestDTO);
+            return ResponseEntity.ok("Password reset email sent.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).body("Bad Request: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Internal Server Error: “+e.getMessage()");
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody PasswordResetDTO resetDTO) {
+        try {
+            memberService.resetPassword(resetDTO.getToken(), resetDTO.getNewPassword());
+            return ResponseEntity.ok("Password reset successfully.");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body("Bad Request: " + e.getMessage());
         } catch (Exception e) {

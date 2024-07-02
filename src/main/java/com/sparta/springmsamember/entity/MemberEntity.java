@@ -1,6 +1,5 @@
 package com.sparta.springmsamember.entity;
 
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -39,6 +38,8 @@ public class MemberEntity implements UserDetails {
     @Column(name = "role")
     private String role;
 
+    @Column(name = "enabled")
+    private boolean enabled;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -47,7 +48,7 @@ public class MemberEntity implements UserDetails {
 
     @Override
     public String getUsername() {
-        return userName;
+        return email;
     }
 
     @Override
@@ -67,6 +68,10 @@ public class MemberEntity implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
+    }
+
+    public String getMemberName() {
+        return userName;
     }
 }
