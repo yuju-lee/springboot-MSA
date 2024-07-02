@@ -23,7 +23,7 @@ public class JwtFilter implements WebFilter, ApplicationContextAware {
     private final JwtTokenProvider jwtTokenProvider;
     private ApplicationContext applicationContext;
 
-    private static final String[] EXCLUDED_PATHS = {"/", "/auth/login", "/member/signup", "/products", "/products/detail/**"};
+    private static final String[] EXCLUDED_PATHS = {"/", "/auth/login", "/member/signup", "/products", "/products/detail/**", "member/find-password", "member/reset-password", "/member/verify/**"};
 
     public JwtFilter(JwtTokenProvider jwtTokenProvider) {
         this.jwtTokenProvider = jwtTokenProvider;
