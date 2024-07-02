@@ -1,0 +1,84 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.1'
+    id 'io.spring.dependency-management' version '1.1.4'
+}
+
+group = 'com.sparta'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' }
+}
+
+ext {
+    set('springCloudVersion', "2022.0.3")
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Security
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.security:spring-security-crypto'
+
+    // JWT
+    compileOnly group: 'io.jsonwebtoken', name: 'jjwt-api', version: '0.11.5'
+    runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-impl', version: '0.11.5'
+    runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.11.5'
+
+    // MySQL
+    implementation 'mysql:mysql-connector-java:8.0.28'
+
+    // Redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // Spring Boot Starter Data JPA
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    // Spring Boot Starter Web
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    // Jackson JSON Processor
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+
+    // kafka
+    implementation 'org.springframework.kafka:spring-kafka'
+
+    // eureka-client
+    implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
