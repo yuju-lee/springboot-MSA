@@ -38,7 +38,8 @@ public class SecurityConfig {
                 .headers(headers -> headers.frameOptions(ServerHttpSecurity.HeaderSpec.FrameOptionsSpec::disable))
                 .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
                 .authorizeExchange(authorizeExchange -> authorizeExchange
-                        .pathMatchers("/", "/auth/login", "/member/signup", "/products", "/products/detail/**", "member/find-password", "member/reset-password", "/member/verify/**").permitAll()
+                        .pathMatchers("/", "/auth/login", "/member/signup", "/products", "/products/detail/**", "member/find-password",
+                                "member/reset-password", "/member/verify**").permitAll()
                         .anyExchange().authenticated())
                 .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint(new JwtAuthenticationEntryPoint())
