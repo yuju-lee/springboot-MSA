@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -129,25 +130,25 @@ public class MemberService {
             throw new IllegalArgumentException("User details do not match");
         }
 
-        String token = UUID.randomUUID().toString();
-        redisTemplate.opsForValue().set(token, member.getEmail(), 1, TimeUnit.HOURS);
+        // 랜덤한 4자리 번호 생성
+        String token = String.format("%04d", new Random().nextInt(10000));
+        redisTemplate.opsForValue().set(requestDTO.getEmail(), token, 1, TimeUnit.HOURS);
 
-        String url = "http://localhost:8080/member/reset-password?token=" + token;
-        emailService.sendEmail(member.getEmail(), "Password Reset", "Click the link to reset your password: " + url);
+        emailService.sendEmail(member.getEmail(), "Password Reset", "Your password reset code is: " + token);
     }
 
     // 비밀번호 재설정
-    public void resetPassword(String token, String newPassword) {
-        String email = (String) redisTemplate.opsForValue().get(token);
-        if (email == null) {
+    public void resetPassword(PasswordResetDTO resetDTO) {
+        String storedToken = (String) redisTemplate.opsForValue().get(resetDTO.getEmail());
+        if (storedToken == null || !storedToken.equals(resetDTO.getToken())) {
             throw new IllegalArgumentException("Invalid or expired password reset token");
         }
 
-        MemberEntity member = jpaMemberRepository.findByEmail(email)
+        MemberEntity member = jpaMemberRepository.findByEmail(resetDTO.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        member.setPassword(passwordEncoder.encode(newPassword));
+        member.setPassword(passwordEncoder.encode(resetDTO.getNewPassword()));
         jpaMemberRepository.save(member);
 
-        redisTemplate.delete(token);
+        redisTemplate.delete(resetDTO.getEmail());
     }
 }

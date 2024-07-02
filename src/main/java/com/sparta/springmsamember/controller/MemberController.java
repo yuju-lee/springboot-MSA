@@ -54,7 +54,7 @@ public class MemberController {
         }
     }
 
-    @PostMapping("/request-password-reset")
+    @PostMapping("/find-password")
     public ResponseEntity<String> requestPasswordReset(@RequestBody PasswordResetRequestDTO requestDTO) {
         try {
             memberService.requestPasswordReset(requestDTO);
@@ -69,7 +69,7 @@ public class MemberController {
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(@RequestBody PasswordResetDTO resetDTO) {
         try {
-            memberService.resetPassword(resetDTO.getToken(), resetDTO.getNewPassword());
+            memberService.resetPassword(resetDTO);
             return ResponseEntity.ok("Password reset successfully.");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body("Bad Request: " + e.getMessage());
