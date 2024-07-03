@@ -41,6 +41,7 @@ public class SchedulerService {
 
         log.info("Scheduled status update for order {} to {} at {}", order.getOrderKey(), nextStatus, updateTime);
     }
+//    1분짜리 테스트
 //    @PostConstruct
 //    public void scheduleInitialOrderStatusUpdates() {
 //        List<OrderEntity> orders = orderRepository.findByOrderStatus("ORDER_CREATE");
@@ -49,7 +50,6 @@ public class SchedulerService {
 //        }
 //    }
 //
-//    1분짜리 테스트
 //    public void scheduleNextStatusUpdate(OrderEntity order, String nextStatus, int minutes) {
 //        LocalDateTime updateTime = order.getOrderAt().plusMinutes(minutes);
 //        long delay = java.time.Duration.between(LocalDateTime.now(), updateTime).toMillis();
