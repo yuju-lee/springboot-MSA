@@ -67,6 +67,9 @@ dependencies {
 
     // Logback Classic (SLF4J의 기본 구현체)
     implementation 'ch.qos.logback:logback-classic:1.4.7'
+
+    // Redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 }
 
 dependencyManagement {
