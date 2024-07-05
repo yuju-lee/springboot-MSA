@@ -229,25 +229,4 @@ public class ProductService {
             }
         }
     }
-
-    @Scheduled(fixedRate = 3600000) // 1시간마다 실행
-    @Transactional
-    public void syncStockWithRedis() {
-        List<ProductEntity> products = productRepository.findAll();
-        for (ProductEntity product : products) {
-            String redisKey = REDIS_STOCK_KEY_PREFIX + product.getProductId();
-            String redisStock = redisTemplate.opsForValue().get(redisKey);
-            if (redisStock != null) {
-                Integer redisStockValue = Integer.valueOf(redisStock);
-                if (!product.getQuantity().equals(redisStockValue)) {
-                    product.setQuantity(redisStockValue);
-                    productRepository.save(product);
-                    log.info("Synchronized product {} stock from Redis to MySQL: {}", product.getProductId(), redisStockValue);
-                }
-            } else {
-                redisTemplate.opsForValue().set(redisKey, String.valueOf(product.getQuantity()));
-                log.info("Initialized Redis stock for product {} from MySQL: {}", product.getProductId(), product.getQuantity());
-            }
-        }
-    }
 }
