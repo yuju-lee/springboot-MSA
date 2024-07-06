@@ -1,33 +1,18 @@
 package com.sparta.springmsamember.dto;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.List;
 
 @Getter
+@Setter
 public class MyPageResponseDTO {
+    private List<WishListDTO> wishList;
+    private List<OrderDTO> orderList;
 
-    private List<WishListRequestDTO> wishList;
-    private List<OrderDTO> orders;
-
-    public MyPageResponseDTO(List<WishListRequestDTO> wishList, List<OrderDTO> orders) {
+    public MyPageResponseDTO(List<WishListDTO> wishList, List<OrderDTO> orderList) {
         this.wishList = wishList;
-        this.orders = orders;
-    }
-
-    public List<WishListRequestDTO> getWishList() {
-        return wishList;
-    }
-
-    public void setWishList(List<WishListRequestDTO> wishList) {
-        this.wishList = wishList;
-    }
-
-    public List<OrderDTO> getOrders() {
-        return orders;
-    }
-
-    public void setOrders(List<OrderDTO> orders) {
-        this.orders = orders;
+        this.orderList = orderList;
     }
 }

@@ -8,7 +8,9 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 public class OrderDTO {
-    private Integer orderKey;
-    private LocalDateTime orderAt;
+    private String email;
     private String orderStatus;
+    private LocalDateTime orderAt;
+    private int orderNumber;
+
 }
