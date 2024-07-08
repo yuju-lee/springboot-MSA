@@ -24,6 +24,8 @@ public class ApiGatewayApplication {
                         .uri("lb://spring-msa-order"))
                 .route("spring-msa-product", r -> r.path("/products/**")
                         .uri("lb://spring-msa-product"))
+                .route("spring-msa-payment", r -> r.path("/payment/**")
+                        .uri("lb://spring-msa-payment"))
                 .build();
     }
 }
