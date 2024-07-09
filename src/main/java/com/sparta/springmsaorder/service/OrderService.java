@@ -161,18 +161,6 @@ public class OrderService {
         orderRepository.save(order);
     }
 
-    @KafkaListener(topics = "order-request-topic", groupId = "order")
-    public void handleOrderRequest(String email) {
-        List<OrderEntity> orders = orderRepository.findByEmail(email);
-        List<OrderDTO> orderDTOs = orders.stream().map(order -> new OrderDTO(order.getOrderKey(), order.getOrderAt(), order.getOrderStatus())).collect(Collectors.toList());
-        try {
-            String orderListJson = objectMapper.writeValueAsString(orderDTOs);
-            kafkaTemplate.send("order-response-topic", orderListJson);
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error serializing order list", e);
-        }
-    }
-
     @KafkaListener(topics = "order-topic", groupId = "order")
     public void handleOrderEvent(String orderDataJson) {
         try {
