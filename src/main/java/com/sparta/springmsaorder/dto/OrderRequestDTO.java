@@ -9,6 +9,7 @@ import java.util.List;
 @Setter
 public class OrderRequestDTO {
     private List<ProductOrderDTO> productInfo;
+    private String email;
 
     public List<ProductOrderDTO> getProductInfo() {
         return productInfo;

@@ -2,6 +2,7 @@ package com.sparta.springmsaorder.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sparta.springmsaorder.client.ProductClient;
 import com.sparta.springmsaorder.dto.*;
 import com.sparta.springmsaorder.entity.OrderDetailEntity;
 import com.sparta.springmsaorder.entity.OrderEntity;
@@ -11,11 +12,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -32,6 +35,9 @@ public class OrderService {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private ProductClient productClient;
 
     private CountDownLatch latch;
     private List<ProductResponseDTO> productResponses;
@@ -67,18 +73,16 @@ public class OrderService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional
     public OrderResponseDTO createOrder(String email, OrderRequestDTO orderRequestDTO) {
+        System.out.println("Start Create order");
         try {
-            productResponses = new ArrayList<>();
-            latch = new CountDownLatch(orderRequestDTO.getProductInfo().size());
+            List<Integer> productIds = orderRequestDTO.getProductInfo().stream()
+                    .map(ProductOrderDTO::getProductNo)
+                    .collect(Collectors.toList());
 
-            for (ProductOrderDTO productOrder : orderRequestDTO.getProductInfo()) {
-                String requestJson = objectMapper.writeValueAsString(productOrder);
-                kafkaTemplate.send("product-info-request-topic", requestJson);
-            }
-
-            latch.await(10, TimeUnit.SECONDS);
+            List<ProductResponseDTO> productResponses = productIds.stream()
+                    .map(productClient::getProductById)
+                    .collect(Collectors.toList());
 
             for (ProductOrderDTO productOrder : orderRequestDTO.getProductInfo()) {
                 ProductResponseDTO productResponse = productResponses.stream()
@@ -98,7 +102,7 @@ public class OrderService {
             order.setOrderStatus("ORDER_CREATE");
             OrderEntity savedOrder = orderRepository.save(order);
 
-            // Save order detail entities and reduce stock
+            // Save order detail entities
             for (ProductOrderDTO productOrder : orderRequestDTO.getProductInfo()) {
                 ProductResponseDTO productResponse = productResponses.stream()
                         .filter(p -> p.getProductNo().equals(productOrder.getProductNo()))
@@ -111,29 +115,29 @@ public class OrderService {
                 orderDetail.setOrderPrice(productResponse.getPrice() * productOrder.getQty());
                 orderDetail.setProductCount(productOrder.getQty());
                 orderDetailRepository.save(orderDetail);
-
-                String deductStockJson = objectMapper.writeValueAsString(productOrder);
-                kafkaTemplate.send("deduct-stock-request-topic", deductStockJson);
             }
 
             // Schedule next status update
-            schedulerService.scheduleNextStatusUpdate(savedOrder, "ON_DELIVERY", 24);
+            schedulerService.scheduleNextStatusUpdate(savedOrder, "ON_DELIVERY", 1); // For testing, using 1 minute
 
             return new OrderResponseDTO("Order Created Successfully");
         } catch (Exception e) {
+            e.printStackTrace();
             return new OrderResponseDTO("Order Failed: " + e.getMessage());
         }
     }
 
-    @KafkaListener(topics = "product-info-response-topic", groupId = "order")
-    public void receiveProductInfo(String productInfoJson) throws JsonProcessingException {
-        ProductResponseDTO productResponse = objectMapper.readValue(productInfoJson, ProductResponseDTO.class);
-        productResponses.add(productResponse);
-        latch.countDown();
+    @Transactional
+    public void deleteOrder(String email, Integer orderNo) {
+        cancelOrReturnOrder(email, orderNo, "ORDER_CREATE", "CANCEL_COMPLETED");
     }
 
     @Transactional
-    public void deleteOrder(String email, Integer orderNo) {
+    public void returnOrder(String email, Integer orderNo) {
+        cancelOrReturnOrder(email, orderNo, "ORDER_COMPLETE", "RETURN_COMPLETE");
+    }
+
+    public void cancelOrReturnOrder(String email, Integer orderNo, String validStatus, String finalStatus) {
         OrderEntity order = orderRepository.findById(orderNo).orElseThrow(
                 () -> new IllegalArgumentException("Order not found")
         );
@@ -142,8 +146,8 @@ public class OrderService {
             throw new IllegalArgumentException("You do not have access to this order");
         }
 
-        if (!"ORDER_CREATE".equals(order.getOrderStatus())) {
-            throw new IllegalArgumentException("Order cancellation is only possible before shipping.");
+        if (!order.getOrderStatus().equals(validStatus)) {
+            throw new IllegalArgumentException("Order cannot be processed. Current status: " + order.getOrderStatus());
         }
 
         List<OrderDetailEntity> orderDetails = orderDetailRepository.findByOrderKey(orderNo);
@@ -151,43 +155,9 @@ public class OrderService {
             ProductOrderDTO productOrderDTO = new ProductOrderDTO();
             productOrderDTO.setProductNo(orderDetail.getProductID());
             productOrderDTO.setQty(orderDetail.getProductCount());
-            try {
-                String restoreStockJson = objectMapper.writeValueAsString(productOrderDTO);
-                kafkaTemplate.send("restore-stock-request-topic", restoreStockJson);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException("Error serializing product order for stock restoration", e);
-            }
+            productClient.restoreStock(productOrderDTO);
         }
-        order.setOrderStatus("CANCEL_COMPLETED");
-        orderRepository.save(order);
-    }
-
-    @Transactional
-    public void returnOrder(String email, Integer orderNo) {
-        OrderEntity order = orderRepository.findById(orderNo).orElseThrow(
-                () -> new IllegalArgumentException("Order not found")
-        ); if (!order.getEmail().equals(email)) {
-            throw new IllegalArgumentException("You do not have access to this order");
-        }
-
-        if (!order.getOrderStatus().equals("ORDER_COMPLETE")) {
-            throw new IllegalArgumentException("Return is only allowed for completed orders.");
-        }
-
-        List<OrderDetailEntity> orderDetails = orderDetailRepository.findByOrderKey(orderNo);
-        for (OrderDetailEntity orderDetail : orderDetails) {
-            ProductOrderDTO productOrderDTO = new ProductOrderDTO();
-            productOrderDTO.setProductNo(orderDetail.getProductID());
-            productOrderDTO.setQty(orderDetail.getProductCount());
-            try {
-                String restoreStockJson = objectMapper.writeValueAsString(productOrderDTO);
-                kafkaTemplate.send("restore-stock-request-topic", restoreStockJson);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException("Error serializing product order for stock restoration", e);
-            }
-        }
-
-        order.setOrderStatus("RETURN_COMPLETE");
+        order.setOrderStatus(finalStatus);
         orderRepository.save(order);
     }
 
@@ -200,6 +170,44 @@ public class OrderService {
             kafkaTemplate.send("order-response-topic", orderListJson);
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Error serializing order list", e);
+        }
+    }
+
+    @KafkaListener(topics = "order-topic", groupId = "order")
+    public void handleOrderEvent(String orderDataJson) {
+        try {
+            Map orderData = objectMapper.readValue(orderDataJson, Map.class);
+            String email = (String) orderData.get("email");
+            int productId = Integer.parseInt((String) orderData.get("productId"));
+            int amount = Integer.parseInt((String) orderData.get("amount"));
+            String status = (String) orderData.get("status");
+
+            if ("COMPLETED".equals(status)) {
+                System.out.println("Order request received: " + email + " " + amount + " " + productId);
+                OrderRequestDTO orderRequestDTO = new OrderRequestDTO();
+                orderRequestDTO.setEmail(email);
+
+                ProductOrderDTO productOrderDTO = new ProductOrderDTO();
+                productOrderDTO.setProductNo(productId);
+                productOrderDTO.setQty(amount);
+
+                List<ProductOrderDTO> productOrderDTOList = new ArrayList<>();
+                productOrderDTOList.add(productOrderDTO);
+
+                orderRequestDTO.setProductInfo(productOrderDTOList);
+
+                OrderResponseDTO response = createOrder(email, orderRequestDTO);
+                System.out.println("Order creation result: " + response.getMessage());
+            }
+        } catch (JsonProcessingException e) {
+            System.err.println("Error processing JSON: " + e.getMessage());
+            e.printStackTrace();
+        } catch (NumberFormatException e) {
+            System.err.println("Error parsing productId or amount: " + e.getMessage());
+            e.printStackTrace();
+        } catch (Exception e) {
+            System.err.println("Unexpected error in handleOrderEvent: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }

@@ -2,13 +2,13 @@ package com.sparta.springmsaorder.service;
 
 import com.sparta.springmsaorder.entity.OrderEntity;
 import com.sparta.springmsaorder.repository.OrderRepository;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.List;
 
