@@ -22,10 +22,11 @@ configurations {
 repositories {
     mavenCentral()
     maven { url 'https://repo.spring.io/milestone' }
+    maven { url 'https://repo.spring.io/release' }
 }
 
 ext {
-    set('springCloudVersion', "2022.0.3")
+    set('springCloudVersion', "2023.0.0-RC1")
 }
 
 dependencies {
@@ -70,7 +71,14 @@ dependencies {
 
     // Redis
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // Feign Client
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+
+    // Spring Boot Actuator
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 }
+
 
 dependencyManagement {
     imports {

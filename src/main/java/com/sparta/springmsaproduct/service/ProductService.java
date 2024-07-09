@@ -11,6 +11,7 @@ import com.sparta.springmsaproduct.repository.ProductRepository;
 import com.sparta.springmsaproduct.repository.WishListRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -30,19 +32,18 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final LikeRepository likeRepository;
     private final WishListRepository wishListRepository;
-    private final ObjectMapper objectMapper;
-    private final KafkaTemplate<String, String> kafkaTemplate;
     private final RedisTemplate<String, String> redisTemplate;
     private static final String REDIS_STOCK_KEY_PREFIX = "product_stock_";
 
-    public ProductService(ProductRepository productRepository, LikeRepository likeRepository, WishListRepository wishListRepository, ObjectMapper objectMapper, KafkaTemplate<String, String> kafkaTemplate, RedisTemplate<String, String> redisTemplate) {
+    private final ObjectMapper objectMapper;
+
+    public ProductService(ProductRepository productRepository, LikeRepository likeRepository,
+                          WishListRepository wishListRepository, RedisTemplate<String, String> redisTemplate, ObjectMapper objectMapper) {
         this.productRepository = productRepository;
         this.likeRepository = likeRepository;
         this.wishListRepository = wishListRepository;
-        this.objectMapper = objectMapper;
-
-        this.kafkaTemplate = kafkaTemplate;
         this.redisTemplate = redisTemplate;
+        this.objectMapper = objectMapper;
     }
 
     public List<ProductDTO> getAllProducts() {
@@ -52,11 +53,20 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
-    public Optional<ProductEntity> getProductById(Integer productId) {
-        return productRepository.findById(productId);
+
+    public ProductResponseDTO getProductById(Integer productId) {
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+
+        ProductResponseDTO responseDTO = new ProductResponseDTO();
+        responseDTO.setProductNo(product.getProductId());
+        responseDTO.setProductName(product.getProductName());
+        responseDTO.setPrice(product.getPrice());
+        responseDTO.setQuantity(product.getQuantity());
+
+        return responseDTO;
     }
 
-    @Transactional
     public String toggleLikeProduct(String email, Integer productId) {
         Optional<ProductEntity> optionalProduct = productRepository.findById(productId);
         if (optionalProduct.isEmpty()) {
@@ -113,7 +123,6 @@ public class ProductService {
                 wish.setQuantity(wishListRequestDTO.getQuantity());
                 wish.setEmail(email);
             }
-
             wishListRepository.save(wish);
             return "Product added to wishlist successfully.";
         } else {
@@ -121,6 +130,7 @@ public class ProductService {
         }
     }
 
+    @Transactional
     public void deleteWishProduct(String email, Integer productId) {
         Optional<WishEntity> optionalWish = wishListRepository.findByProductIdAndEmail(productId, email);
         if (optionalWish.isPresent()) {
@@ -131,102 +141,43 @@ public class ProductService {
         }
     }
 
-    public List<WishListRequestDTO> getWishListByEmail(String email) {
-        List<WishEntity> wishList = wishListRepository.findByEmail(email);
-        return wishList.stream()
-                .map(wish -> new WishListRequestDTO(wish.getProductName(), wish.getPrice(), wish.getQuantity()))
-                .collect(Collectors.toList());
-    }
-
-    @KafkaListener(topics = "product-info-request-topic", groupId = "product")
-    public void sendProductInfo(String productOrderJson) throws JsonProcessingException {
-        ProductOrderDTO productOrder = objectMapper.readValue(productOrderJson, ProductOrderDTO.class);
-
-        Optional<ProductEntity> productOpt = productRepository.findById(productOrder.getProductNo());
-        if (productOpt.isPresent()) {
-            ProductEntity product = productOpt.get();
-            Integer stock = Integer.valueOf(Objects.requireNonNull(redisTemplate.opsForValue().get(REDIS_STOCK_KEY_PREFIX + product.getProductId())));
-
-            ProductResponseDTO productResponse = new ProductResponseDTO(
-                    product.getProductId(),
-                    product.getProductName(),
-                    product.getPrice(),
-                    stock
-            );
-            String responseJson = objectMapper.writeValueAsString(productResponse);
-            kafkaTemplate.send("product-info-response-topic", responseJson);
-        }
-    }
-
-    @KafkaListener(topics = "deduct-stock-request-topic", groupId = "product")
     @Transactional
-    public void deductStock(String productOrderJson) throws JsonProcessingException {
-        ProductOrderDTO productOrder = objectMapper.readValue(productOrderJson, ProductOrderDTO.class);
+    public void restoreStock(ProductOrderDTO productOrderDTO) {
+        Optional<ProductEntity> productOpt = productRepository.findById(productOrderDTO.getProductNo());
 
-        Optional<ProductEntity> productOpt = productRepository.findById(productOrder.getProductNo());
         if (productOpt.isPresent()) {
             ProductEntity product = productOpt.get();
-            product.setQuantity(product.getQuantity() - productOrder.getQty());
-            redisTemplate.opsForValue().decrement(REDIS_STOCK_KEY_PREFIX + product.getProductId(), productOrder.getQty());
+
+            product.setQuantity(product.getQuantity() + productOrderDTO.getQty());
             productRepository.save(product);
+
+            redisTemplate.opsForValue().increment(REDIS_STOCK_KEY_PREFIX + product.getProductId(), productOrderDTO.getQty());
+
+            log.info("Restored stock for product {} in SQL and Redis by {}", product.getProductId(), productOrderDTO.getQty());
+        } else {
+            log.warn("Product not found for ID: {}", productOrderDTO.getProductNo());
         }
     }
 
-    @KafkaListener(topics = "restore-stock-request-topic", groupId = "product")
-    @Transactional
-    public void restoreStock(String productOrderJson) throws JsonProcessingException {
-        ProductOrderDTO productOrder = objectMapper.readValue(productOrderJson, ProductOrderDTO.class);
-
-        Optional<ProductEntity> productOpt = productRepository.findById(productOrder.getProductNo());
-        if (productOpt.isPresent()) {
-            ProductEntity product = productOpt.get();
-            product.setQuantity(product.getQuantity() + productOrder.getQty());
-            redisTemplate.opsForValue().increment(REDIS_STOCK_KEY_PREFIX + product.getProductId(), productOrder.getQty());
-            productRepository.save(product);
-        }
-    }
-
-    // 위시리스트 요청 수신
-    @KafkaListener(topics = "wishlist-request-topic", groupId = "product")
-    public void listenProductWishlist(String email) {
-        log.info("Received wishlist request for email: {}", email);
-
-        // 위시리스트를 가져옴
-        List<WishEntity> wishList = wishListRepository.findByEmail(email);
-
-        // DTO로 변환
-        List<WishListRequestDTO> wishListDTOs = wishList.stream()
-                .map(wish -> new WishListRequestDTO(wish.getProductId(), wish.getProductName(), wish.getPrice(), wish.getQuantity()))
-                .collect(Collectors.toList());
-
+    @KafkaListener(topics = "stock-update-topic", groupId = "stock-group")
+    public void handleStockUpdate(String stockUpdateDataJson) {
         try {
-            // DTO를 JSON 배열로 변환
-            String wishListJson = objectMapper.writeValueAsString(wishListDTOs);
+            Map stockUpdateData = objectMapper.readValue(stockUpdateDataJson, Map.class);
+            int productId = Integer.parseInt((String) stockUpdateData.get("productId"));
+            int stock = Integer.parseInt((String) stockUpdateData.get("stock"));
 
-            // 멤버로 전송
-            kafkaTemplate.send("wishlist-topic", wishListJson);
-            log.info("Sent wishlist for email: {} to member service", email);
-            log.info("Sent wishlist: {}", wishListJson);
-        } catch (JsonProcessingException e) {
-            log.error("Error serializing wishlist for email: {}", email, e);
+            updateProductStock(productId, stock);
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
-    // 위시리스트 요청 보내기
-    public void sendWishListRequest(String email) {
-        kafkaTemplate.send("wishlist-request-topic", email);
+    public void updateProductStock(int productId, int stock) {
+        ProductEntity product = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("Product not found: " + productId));
+        product.setQuantity(stock);
+        productRepository.save(product);
     }
 
-    @PostConstruct
-    public void initializeStockInRedis() {
-        List<ProductEntity> products = productRepository.findAll();
-        for (ProductEntity product : products) {
-            String redisKey = REDIS_STOCK_KEY_PREFIX + product.getProductId();
-            String redisStock = redisTemplate.opsForValue().get(redisKey);
-            if (redisStock == null) {
-                redisTemplate.opsForValue().set(redisKey, String.valueOf(product.getQuantity()));
-                log.info("Initialized Redis stock for product {} from MySQL: {}", product.getProductId(), product.getQuantity());
-            }
-        }
-    }
 }

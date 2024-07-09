@@ -1,6 +1,8 @@
 package com.sparta.springmsaproduct.controller;
 
 import com.sparta.springmsaproduct.dto.ProductDTO;
+import com.sparta.springmsaproduct.dto.ProductOrderDTO;
+import com.sparta.springmsaproduct.dto.ProductResponseDTO;
 import com.sparta.springmsaproduct.dto.WishListRequestDTO;
 import com.sparta.springmsaproduct.entity.ProductEntity;
 import com.sparta.springmsaproduct.service.ProductService;
@@ -29,8 +31,9 @@ public class ProductController {
     }
 
     @GetMapping("/detail/{productId}")
-    public ResponseEntity<Optional<ProductEntity>> getProductById(@PathVariable Integer productId) {
-        return ResponseEntity.ok(productService.getProductById(productId));
+    public ResponseEntity<ProductResponseDTO> getProductById(@PathVariable Integer productId) {
+        ProductResponseDTO product = productService.getProductById(productId);
+        return ResponseEntity.ok(product);
     }
 
     @PostMapping("/like/{productId}")
@@ -54,4 +57,10 @@ public class ProductController {
         productService.deleteWishProduct(email, productId);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/products/restore-stock")
+    public void restoreStock(@RequestBody ProductOrderDTO productOrderDTO) {
+        productService.restoreStock(productOrderDTO);
+    }
+
 }

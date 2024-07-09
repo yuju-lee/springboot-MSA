@@ -18,4 +18,7 @@ public class ProductResponseDTO {
         this.quantity = quantity;
     }
 
+    public ProductResponseDTO() {
+
+    }
 }
