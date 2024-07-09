@@ -66,7 +66,6 @@ public class SchedulerService {
         OrderEntity order = orderRepository.findById(orderKey).orElseThrow(
                 () -> new IllegalArgumentException("Order not found")
         );
-
         switch (status) {
             case "ON_DELIVERY":
                 if ("ORDER_CREATE".equals(order.getOrderStatus())) {
