@@ -88,7 +88,7 @@ public class MemberService {
         MemberEntity member = jpaMemberRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        member.setEnabled(true);  // Assuming MemberEntity has a field to indicate whether the user is enabled
+        member.setEnabled(true);
         jpaMemberRepository.save(member);
 
         redisTemplate.delete(token);

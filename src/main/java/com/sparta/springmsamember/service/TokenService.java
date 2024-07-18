@@ -20,7 +20,7 @@ public class TokenService {
 
     public void storeRefreshToken(String email, String refreshToken) {
         ValueOperations<String, String> ops = redisTemplate.opsForValue();
-        ops.set(email + ":refreshToken", refreshToken, Duration.ofDays(7)); // Refresh token expiration set to 7 days
+        ops.set(email + ":refreshToken", refreshToken, Duration.ofDays(7));
     }
 
     public String getRefreshToken(String email) {
@@ -30,7 +30,7 @@ public class TokenService {
 
     public void addToBlacklist(String token) {
         ValueOperations<String, String> ops = redisTemplate.opsForValue();
-        ops.set(token, "blacklisted", Duration.ofHours(1)); // Blacklist expiration time same as token expiration
+        ops.set(token, "blacklisted", Duration.ofHours(1));
     }
 
     public boolean isBlacklisted(String token) {
@@ -44,10 +44,6 @@ public class TokenService {
 
     public Set<String> getAccessTokens(String email) {
         return redisTemplate.opsForSet().members(email + ":accessTokens");
-    }
-
-    public void removeAccessToken(String email, String accessToken) {
-        redisTemplate.opsForSet().remove(email + ":accessTokens", accessToken);
     }
 
     // 모든 기기에서 로그아웃

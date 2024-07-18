@@ -75,7 +75,6 @@ public class JwtUtil {
     }
 
     public boolean validateTokenConsideringBlacklist(String token) {
-        // 블랙리스트 확인 로직 추가 필요
         return validateToken(token) && !tokenService.isBlacklisted(token);
     }
 }
