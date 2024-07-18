@@ -1,6 +1,7 @@
 package com.sparta.apigateway.jwt;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -30,6 +31,19 @@ public class JwtTokenProvider {
         this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
+    public String generateToken(String email) {
+        Claims claims = Jwts.claims().setSubject(email);
+        claims.put("email", email);
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + expirationTime);
+
+        return Jwts.builder()
+                .setClaims(claims)
+                .setIssuedAt(now)
+                .setExpiration(validity)
+                .signWith(key, SignatureAlgorithm.HS256)
+                .compact();
+    }
 
     public boolean validateToken(String token) {
         try {
@@ -47,9 +61,10 @@ public class JwtTokenProvider {
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
-            String email = claims.get("email", String.class);
-            logger.info("Extracted email from token: {}", email);
-            return email;
+            return claims.get("email", String.class);
+        } catch (ExpiredJwtException e) {
+            logger.error("JWT token is expired: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
             logger.error("Failed to extract email from token: {}", e.getMessage());
             return null;
