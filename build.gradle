@@ -22,21 +22,20 @@ configurations {
 repositories {
     mavenCentral()
     maven { url 'https://repo.spring.io/milestone' }
+    maven { url 'https://repo.spring.io/release' }
 }
 
 ext {
-    set('springCloudVersion', "2022.0.3")
+    set('springCloudVersion', "2023.0.0-RC1")
 }
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    // lombok
+    // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
 
@@ -44,37 +43,37 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.security:spring-security-crypto'
 
-    // JWT
-    compileOnly group: 'io.jsonwebtoken', name: 'jjwt-api', version: '0.11.5'
-    runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-impl', version: '0.11.5'
-    runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.11.5'
-
     // MySQL
     implementation 'mysql:mysql-connector-java:8.0.28'
-
-    // Redis
-    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
     // Spring Boot Starter Data JPA
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
-    // Spring Boot Starter Web
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-
     // Jackson JSON Processor
     implementation 'com.fasterxml.jackson.core:jackson-databind'
 
-    // kafka
+    // Kafka
     implementation 'org.springframework.kafka:spring-kafka'
 
-    // eureka-client
+    // Eureka Client
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
-    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    // SLF4J API
+    implementation 'org.slf4j:slf4j-api:2.0.7'
 
-    // google email
-    implementation group: 'org.springframework.boot', name: 'spring-boot-starter-mail', version: '3.0.5'
+    // Logback Classic (SLF4J의 기본 구현체)
+    implementation 'ch.qos.logback:logback-classic:1.4.7'
+
+    // Redis
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // Feign Client
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+
+    // Spring Boot Actuator
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
 }
+
 
 dependencyManagement {
     imports {

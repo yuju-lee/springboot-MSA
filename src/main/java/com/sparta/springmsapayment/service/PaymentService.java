@@ -2,6 +2,8 @@ package com.sparta.springmsapayment.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sparta.springmsapayment.client.MemberRoleClient;
+import com.sparta.springmsapayment.dto.MemberRoleResponseDTO;
 import com.sparta.springmsapayment.repository.SaleTimeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,7 +14,9 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -25,6 +29,7 @@ public class PaymentService {
     private final ObjectMapper objectMapper;
     private final Random random = new Random();
     private final SaleTimeRepository saleTimeRepository;
+    private final MemberRoleClient memberRoleClient;
 
     @Value("${redis.stock.key.prefix}")
     private String redisStockKeyPrefix;
@@ -33,11 +38,23 @@ public class PaymentService {
     private String stockUpdateTopic;
 
     @Autowired
-    public PaymentService(RedisTemplate<String, String> redisTemplate, KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper, SaleTimeRepository saleTimeRepository) {
+    public PaymentService(RedisTemplate<String, String> redisTemplate, KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper, SaleTimeRepository saleTimeRepository, MemberRoleClient memberRoleClient) {
         this.redisTemplate = redisTemplate;
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
         this.saleTimeRepository = saleTimeRepository;
+        this.memberRoleClient = memberRoleClient;
+    }
+
+    public void setProductSaleTime(int productId, String saleTime, String email) {
+        MemberRoleResponseDTO userRole = memberRoleClient.getMemberRole(email);
+
+        if (userRole == null || !"ROLE_ADMIN".equals(userRole.getRole())) {
+            throw new SecurityException("Access Denied");
+        }
+
+        LocalDateTime saleStartTime = LocalDateTime.parse(saleTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        saleTimeRepository.setProductSaleTime(productId, LocalTime.from(saleStartTime));
     }
 
     @Transactional
