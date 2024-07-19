@@ -74,7 +74,7 @@ public class MemberController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(400).body("Bad Request: " + e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Internal Server Error: “+e.getMessage()");
+            return ResponseEntity.status(500).body("Internal Server Error: "+e.getMessage());
         }
     }
 
@@ -89,4 +89,10 @@ public class MemberController {
             return ResponseEntity.status(500).body("Internal Server Error: " + e.getMessage());
         }
     }
+
+    @GetMapping("/{email}")
+    public MemberRoleResponseDTO getMemberRole(@PathVariable String email) {
+        return memberService.getMemberRoleByEmail(email);
+    }
+
 }

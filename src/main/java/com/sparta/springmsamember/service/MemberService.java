@@ -12,6 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.lang.reflect.Member;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
@@ -151,5 +153,11 @@ public class MemberService {
         jpaMemberRepository.save(member);
 
         redisTemplate.delete(resetDTO.getEmail());
+    }
+
+    public MemberRoleResponseDTO getMemberRoleByEmail(String email) {
+        Optional<MemberEntity> memberOpt = jpaMemberRepository.findByEmail(email);
+        MemberEntity member = memberOpt.orElseThrow(() -> new NoSuchElementException("Member with email " + email + " not found"));
+        return new MemberRoleResponseDTO(member.getEmail(), member.getRole());
     }
 }
