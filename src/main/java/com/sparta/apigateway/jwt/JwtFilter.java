@@ -27,7 +27,7 @@ public class JwtFilter implements WebFilter, ApplicationContextAware {
     private ApplicationContext applicationContext;
 
     private static final String[] EXCLUDED_PATHS = {"/", "/auth/login", "/member/signup", "/products",
-            "/products/detail/**", "member/find-password", "member/reset-password", "/member/verify**"};
+            "/products/detail/**", "/member/find-password", "/member/reset-password", "/member/verify**"};
 
     public JwtFilter(JwtTokenProvider jwtTokenProvider, RedisTemplate<String, String> redisTemplate) {
         this.jwtTokenProvider = jwtTokenProvider;
