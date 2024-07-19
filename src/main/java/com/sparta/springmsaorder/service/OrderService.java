@@ -118,7 +118,7 @@ public class OrderService {
             }
 
             // Schedule next status update
-            schedulerService.scheduleNextStatusUpdate(savedOrder, "ON_DELIVERY", 1); // For testing, using 1 minute
+            schedulerService.scheduleNextStatusUpdate(savedOrder, "ON_DELIVERY", 24);
 
             return new OrderResponseDTO("Order Created Successfully");
         } catch (Exception e) {
