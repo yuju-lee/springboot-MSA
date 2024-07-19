@@ -58,7 +58,7 @@ public class ProductController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/products/restore-stock")
+    @PostMapping("/restore-stock")
     public void restoreStock(@RequestBody ProductOrderDTO productOrderDTO) {
         productService.restoreStock(productOrderDTO);
     }
