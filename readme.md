@@ -6,17 +6,6 @@
 - 개발: [이유주](https://github.com/yuju-lee)
 - [API Reference](https://documenter.getpostman.com/view/34877450/2sA3kUFMjX)
 
-```
-branches
-├── main
-├── API-Gateway
-├── eureka-service
-├── member-service
-├── order-service
-├── payment-service
-└── product-service
-```
-
 ## 실행 명령어
 ``` 
 docker-compose up -d
@@ -98,7 +87,7 @@ docker-compose up -d
 
 ## Trouble shooting
 - Redis의 분산 락 사용 시 선착순 구매가 되지 않고, 랜덤으로 락을 가져가는 현상이 발생하여 Lua script로 로직을 변경해 해결했습니다. [바로가기](https://yuju-lee.github.io/logs/MSA-16-changedProcess/)
-- 순환 참조에 대한 오류를 해결했습니다.
+- 순환 참조에 대한 오류를 해결했습니다. [바로가기](https://yuju-lee.github.io/logs/MSA-5-useRefreshTokenInJWT/)
 
 
 ### 개발 기록 블로그
